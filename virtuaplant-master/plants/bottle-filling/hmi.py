@@ -5,6 +5,8 @@
 #########################################
 # - HMI Windows
 import  sys
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository  import GLib, Gtk, GObject
 
 # - HMI communication
@@ -118,7 +120,7 @@ class HMIWindow(Gtk.Window):
         self.nozzleStatusValue      = nozzleStatusValue
 
         self.resetLabels()
-        GObject.timeout_add_seconds(HMI_SLEEP, self.update_status)
+        GLib.timeout_add_seconds(HMI_SLEEP, self.update_status)
 
     def setProcess(self, widget, data=None):
         try:
@@ -169,7 +171,6 @@ class HMIWindow(Gtk.Window):
             return True
 
 def main():
-    GObject.threads_init()
     win = HMIWindow(PLC_SERVER_IP, PLC_SERVER_PORT)
 
     win.connect("delete-event", Gtk.main_quit)

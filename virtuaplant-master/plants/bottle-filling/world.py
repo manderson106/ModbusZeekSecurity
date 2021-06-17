@@ -15,6 +15,7 @@ import  pygame
 from    pygame.locals       import *
 from    pygame.color        import *
 import  pymunk
+import math
 
 # - World communication
 from    modbus              import ServerModbus as Server
@@ -31,7 +32,7 @@ log.setLevel(logging.INFO)
 # PLC
 #########################################
 PLC_SERVER_IP   = "localhost"
-PLC_SERVER_PORT = 502
+PLC_SERVER_PORT = 5025
 
 PLC_RW_ADDR = 0x0
 PLC_TAG_RUN = 0x0
@@ -46,7 +47,7 @@ PLC_TAG_NOZZLE  = 0x4
 # MOTOR actuator
 #########################################
 MOTOR_SERVER_IP     = "localhost"
-MOTOR_SERVER_PORT   = 503
+MOTOR_SERVER_PORT   = 5021
 
 MOTOR_RW_ADDR = 0x0
 MOTOR_TAG_RUN = 0x0
@@ -55,7 +56,7 @@ MOTOR_TAG_RUN = 0x0
 # NOZZLE actuator
 #########################################
 NOZZLE_SERVER_IP    = "localhost"
-NOZZLE_SERVER_PORT  = 504
+NOZZLE_SERVER_PORT  = 5022
 
 NOZZLE_RW_ADDR = 0x0
 NOZZLE_TAG_RUN = 0x0
@@ -64,7 +65,7 @@ NOZZLE_TAG_RUN = 0x0
 # LEVEL sensor
 #########################################
 LEVEL_SERVER_IP     = "localhost"
-LEVEL_SERVER_PORT   = 505
+LEVEL_SERVER_PORT   = 5023
 
 LEVEL_RO_ADDR = 0x0
 LEVEL_TAG_SENSOR = 0x0
@@ -73,7 +74,7 @@ LEVEL_TAG_SENSOR = 0x0
 # CONTACT sensor
 #########################################
 CONTACT_SERVER_IP   = "localhost"
-CONTACT_SERVER_PORT = 506
+CONTACT_SERVER_PORT = 5024
 
 CONTACT_RO_ADDR = 0x0
 CONTACT_TAG_SENSOR = 0x0
@@ -119,8 +120,11 @@ def add_ball(space):
     return shape
 
 def draw_ball(screen, ball, color=THECOLORS['blue']):
-    p = int(ball.body.position.x), 600-int(ball.body.position.y)
-    pygame.draw.circle(screen, color, p, int(ball.radius), 2)
+    if math.isnan(ball.body.position.x) == False:
+        p = int(ball.body.position.x), 600-int(ball.body.position.y)
+        pygame.draw.circle(screen, color, p, int(ball.radius), 2)
+    else:
+        pass
     
 def add_bottle_in_sensor(space):
     radius = 2
@@ -130,6 +134,7 @@ def add_bottle_in_sensor(space):
 
     shape = pymunk.Circle(body, radius, (0, 0))
     shape.collision_type = 0x8 # 'bottle_in'
+    space.add(body)
     space.add(shape)
 
     return shape
@@ -142,6 +147,7 @@ def add_level_sensor(space):
 
     shape = pymunk.Circle(body, radius, (0, 0))
     shape.collision_type = 0x5 # level_sensor
+    space.add(body)
     space.add(shape)
 
     return shape
@@ -154,6 +160,7 @@ def add_contact_sensor(space):
 
     shape = pymunk.Circle(body, radius, (0, 0))
     shape.collision_type = 0x1 # switch
+    space.add(body)
     space.add(shape)
 
     return shape
@@ -162,7 +169,8 @@ def add_nozzle_actuator(space):
     body = pymunk.Body()
     body.position = (180, 430)
 
-    shape = pymunk.Poly.create_box(body, (15, 20), (0, 0), 0)
+    shape = pymunk.Poly.create_box(body, (15, 20), 0)
+    space.add(body)
     space.add(shape)
 
     return shape
@@ -171,9 +179,10 @@ def add_base(space):
     body = pymunk.Body()
     body.position = (0, 300)
 
-    shape = pymunk.Poly.create_box(body, (WORLD_SCREEN_WIDTH, 20), ((WORLD_SCREEN_WIDTH/2), -10), 0)
+    shape = pymunk.Poly.create_box(body, (WORLD_SCREEN_WIDTH, 20), 0)
     shape.friction = 1.0
     shape.collision_type = 0x7 # base
+    space.add(body)
     space.add(shape)
 
     return shape
@@ -289,33 +298,68 @@ def runWorld():
     space.gravity = (0.0, -900.0)
 
     # Contact sensor with bottle bottom
-    space.add_collision_handler(0x1, 0x2, begin=no_collision)
+    #space.add_collision_handler(0x1, 0x2, begin=no_collision)
+
+    h1 = space.add_collision_handler(0x1, 0x2)
+    h1.begin=no_collision
 
     # Contact sensor with bottle left side
-    space.add_collision_handler(0x1, 0x3, begin=no_bottle)
+    #space.add_collision_handler(0x1, 0x3, begin=no_bottle)
+
+    h2 = space.add_collision_handler(0x1, 0x3)
+    h2.begin=no_bottle
 
     # Contact sensor with bottle right side
-    space.add_collision_handler(0x1, 0x4, begin=bottle_in_place)
+    #space.add_collision_handler(0x1, 0x4, begin=bottle_in_place)
+
+    h3 = space.add_collision_handler(0x1, 0x4)
+    h3.begin=bottle_in_place
 
     # Contact sensor with ground
-    space.add_collision_handler(0x1, 0x7, begin=no_collision)
+    #space.add_collision_handler(0x1, 0x7, begin=no_collision)
+
+    h4 = space.add_collision_handler(0x1, 0x7)
+    h4.begin=no_collision
 
     # Level sensor with bottle left side
-    space.add_collision_handler(0x5, 0x3, begin=no_level)
+    #space.add_collision_handler(0x5, 0x3, begin=no_level)
+
+    h5 = space.add_collision_handler(0x5, 0x3)
+    h5.begin=no_level
 
     # Level sensor with bottle right side
-    space.add_collision_handler(0x5, 0x4, begin=no_collision)
+    #space.add_collision_handler(0x5, 0x4, begin=no_collision)
+
+    h6 = space.add_collision_handler(0x5, 0x4)
+    h6.begin=no_collision
 
     # Level sensor with water
-    space.add_collision_handler(0x5, 0x6, begin=level_ok)
+    #space.add_collision_handler(0x5, 0x6, begin=level_ok)
+
+    h7 = space.add_collision_handler(0x5, 0x6)
+    h7.begin=level_ok
 
     # Level sensor with ground
-    space.add_collision_handler(0x5, 0x7, begin=no_collision)
+    #space.add_collision_handler(0x5, 0x7, begin=no_collision)
+
+    h8 = space.add_collision_handler(0x5, 0x7)
+    h8.begin=no_collision
 
     # Bottle in with bottle sides and bottom
-    space.add_collision_handler(0x8, 0x2, begin=no_collision, separate=add_new_bottle)
-    space.add_collision_handler(0x8, 0x3, begin=no_collision)
-    space.add_collision_handler(0x8, 0x4, begin=no_collision)
+    #space.add_collision_handler(0x8, 0x2, begin=no_collision, separate=add_new_bottle)
+    #space.add_collision_handler(0x8, 0x3, begin=no_collision)
+    #space.add_collision_handler(0x8, 0x4, begin=no_collision)
+
+    h9 = space.add_collision_handler(0x8, 0x2)
+    h10 = space.add_collision_handler(0x8, 0x3)
+    h11 = space.add_collision_handler(0x8, 0x4)
+
+    h9.begin = no_collision
+    h10.begin = no_collision
+    h11.begin = no_collision
+
+    h9.separate=add_new_bottle
+
 
     base            = add_base(space)
     nozzle_actuator = add_nozzle_actuator(space)
@@ -383,7 +427,8 @@ def runWorld():
         # Manage motor : move the bottles
         if motor['server'].read(MOTOR_RW_ADDR + MOTOR_TAG_RUN) == 1:
             for bottle in bottles:
-                bottle[0].body.position.x += 0.25
+                if math.isnan(bottle[0].body.position.x) == False:
+                    bottle[0].body.position.x += 0.25
 
         # Draw water balls
         # Remove off-screen balls
@@ -396,13 +441,14 @@ def runWorld():
 
         for ball in balls_to_remove:
             space.remove(ball, ball.body)
-
+        
             balls.remove(ball)
 
         # Draw bottles
         for bottle in bottles:
             if bottle[0].body.position.x > WORLD_SCREEN_WIDTH+150 or bottle[0].body.position.y < 150:
-                space.remove(bottle, bottle[0].body)
+                space.remove(bottle[0].body)
+
 
                 bottles.remove(bottle)
 

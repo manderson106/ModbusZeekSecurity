@@ -5,7 +5,7 @@
 #########################################
 # - Modbus protocol
 from pymodbus.client.sync   import ModbusTcpClient
-from pymodbus.server.async  import ModbusServerFactory
+from pymodbus.server.asynchronous  import ModbusServerFactory
 from pymodbus.device        import ModbusDeviceIdentification
 from pymodbus.datastore     import ModbusSequentialDataBlock
 from pymodbus.datastore     import ModbusSlaveContext, ModbusServerContext
